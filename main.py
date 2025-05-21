@@ -42,13 +42,13 @@ if __name__ == "__main__":
 
     if model_name == "VGG16":
         T = VGG16(n_classes)
-        path_T = './weights/VGG16.tar'
+        path_T = '/kaggle/input/weightcs106/weights/VGG16.tar'
     elif model_name == 'ResNet-152':
         T = IR152(n_classes)
-        path_T = './weights/ResNet-152.tar'
+        path_T = '/kaggle/input/weightcs106/weights/ResNet-152.tar'
     elif model_name == "Face.evoLVe":
         T = FaceNet64(n_classes)
-        path_T = './weights/Face.evoLVe.tar'
+        path_T = '/kaggle/input/weightcs106/weights/Face.evoLVe.tar'
 
     T = torch.nn.DataParallel(T).cuda()
     ckp_T = torch.load(path_T)
