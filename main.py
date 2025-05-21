@@ -36,7 +36,7 @@ if __name__ == "__main__":
     G = Generator(z_dim)
     G = nn.DataParallel(G).cuda()
     G = G.cuda()
-    ckp_G = torch.load('weights/CelebA.tar')['state_dict']
+    ckp_G = torch.load('/kaggle/input/weightcs106/weights/CelebA.tar')['state_dict']
     load_my_state_dict(G, ckp_G)
     G.eval()
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     T.eval()
 
     E = FaceNet(n_classes)
-    path_E = './weights/Eval.tar'
+    path_E = '/kaggle/input/weightcs106/weights/Eval.tar'
     E = torch.nn.DataParallel(E).cuda()
     ckp_E = torch.load(path_E)
     E.load_state_dict(ckp_E['state_dict'], strict=False)
