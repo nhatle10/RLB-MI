@@ -97,6 +97,7 @@ if __name__ == "__main__":
             agent,
             G,
             T,
+            E,
             alpha,
             z_dim=z_dim,
             max_episodes=max_episodes,
