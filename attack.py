@@ -165,7 +165,7 @@ def inversion(
 
             print(f"Episode {i_episode}:")
             print(
-                f"  Model E - Accuracy: {E_top1_correct:.4f}, Top-5 accuracy: {E_top5_correct:.4f}"
+                f"  Model E - Accuracy: {E_top1_correct.float().mean():.4f}, Top-5 accuracy: {E_top5_correct.float().mean():.4f}"
             )
 
         if mean_score >= best_score:
