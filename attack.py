@@ -51,13 +51,11 @@ def inversion(
                 action.clone().detach().reshape((1, len(action))).cuda()
             ).detach()
 
-            if i_episode == 0 and t == 0:
-                os.makedirs(
-                    f"./result/images/{model_name}/first_episode", exist_ok=True
-                )
+            if i_episode % 1000 == 0 and t == 0:
+                os.makedirs(f"./result/gen_image/{model_name}", exist_ok=True)
                 save_image(
                     state_image.cpu(),
-                    f"./result/images/{model_name}/first_episode/{label}_{alpha}_initial.png",
+                    f"./result/gen_image/{model_name}/{label}_{alpha}_{i_episode}.png",
                 )
 
             # Calculate the reward.

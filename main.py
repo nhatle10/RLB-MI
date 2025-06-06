@@ -10,6 +10,7 @@ from classify import *
 from utils import *
 from SAC import Agent
 from attack import inversion
+import pickle
 
 parser = argparse.ArgumentParser(description="RLB-MI")
 parser.add_argument("-model_name", default="VGG16")
@@ -127,3 +128,9 @@ if __name__ == "__main__":
             f"After episode {episode}: Top-1 accuracy: {cnt[idx]}/{len(targets)}, "
             f"Top-5 accuracy: {cnt5[idx]}/{len(targets)}"
         )
+
+    with open("top1_acc.pkl", "wb") as f:
+        pickle.dump(cnt, f)
+
+    with open("top5_acc.pkl", "wb") as f:
+        pickle.dump(cnt5, f)
