@@ -26,11 +26,12 @@ def inversion(
     print("Target Label : " + str(label))
     best_score = 0
 
-    # Add metrics for evaluation model E
+    # Initialize lists to store the accuracy data
+    episodes = []
     accuracy_E_list = []
     accuracy_top5_E_list = []
 
-    for i_episode in range(1, max_episodes + 1):
+    for i_episode in range(max_episodes):
         y = torch.tensor([label]).cuda()
 
         # Initialize the state at the beginning of each episode.
@@ -49,6 +50,15 @@ def inversion(
             action_image = G(
                 action.clone().detach().reshape((1, len(action))).cuda()
             ).detach()
+
+            if i_episode == 0 and t == 0:
+                os.makedirs(
+                    f"./result/images/{model_name}/first_episode", exist_ok=True
+                )
+                save_image(
+                    state_image.cpu(),
+                    f"./result/images/{model_name}/first_episode/{label}_{alpha}_initial.png",
+                )
 
             # Calculate the reward.
             _, state_output = T(state_image)
@@ -135,7 +145,7 @@ def inversion(
         mean_score = sum(test_scores) / len(test_scores)
 
         # Save metrics every 500 episodes
-        if i_episode % 500 == 0:
+        if i_episode % 500 == 0 or i_episode == max_episodes - 1:
             # Also evaluate using model E (FaceNet)
             with torch.no_grad():
                 # Use low2high preprocessing for model E as in main.py
@@ -147,47 +157,36 @@ def inversion(
                 _, E_top_indices = torch.topk(E_softmax_output, 5, dim=1)
                 E_top1_correct = E_top_indices[:, 0] == y.cpu()
                 E_top5_correct = (E_top_indices == y.cpu().unsqueeze(1)).any(dim=1)
-                E_top1_accuracy = float(E_top1_correct.float().mean())
-                E_top5_accuracy = float(E_top5_correct.float().mean())
 
-            # Store metrics
-            accuracy_E_list.append(E_top1_accuracy)
-            accuracy_top5_E_list.append(E_top5_accuracy)
+                # Record the episode number and accuracies
+                episodes.append(i_episode)
+                accuracy_E_list.append(E_top1_correct)
+                accuracy_top5_E_list.append(E_top5_correct)
 
-            # Save metrics to file
-            metrics_dir = f"./result/metrics/{model_name}"
-            os.makedirs(f"{metrics_dir}/{label}", exist_ok=True)
-            metrics_file = f"{metrics_dir}/{label}/{alpha}.npz"
-            np.savez(
-                metrics_file,
-                accuracy_E=np.array(accuracy_E_list),
-                accuracy_top5_E=np.array(accuracy_top5_E_list),
-            )
             print(f"Episode {i_episode}:")
             print(
-                f"  Model E - Accuracy: {E_top1_accuracy:.4f}, Top-5 accuracy: {E_top5_accuracy:.4f}"
+                f"  Model E - Accuracy: {E_top1_correct:.4f}, Top-5 accuracy: {E_top5_correct:.4f}"
             )
 
         if mean_score >= best_score:
             best_score = mean_score
             best_images = torch.vstack(test_images)
-            os.makedirs("./result/images/{}".format(model_name), exist_ok=True)
-            os.makedirs("./result/models/{}".format(model_name), exist_ok=True)
+            os.makedirs(f"./result/images/{model_name}", exist_ok=True)
+            os.makedirs(f"./result/models/{model_name}", exist_ok=True)
             save_image(
                 best_images,
-                "./result/images/{}/{}_{}.png".format(model_name, label, alpha),
+                f"./result/images/{model_name}/{label}_{alpha}.png",
                 nrow=10,
             )
             torch.save(
                 agent.actor_local.state_dict(),
-                "./result/models/{}/actor_{}_{}.pt".format(model_name, label, alpha),
+                f"./result/models/{model_name}/actor_{label}_{alpha}.pt",
             )
 
-        if i_episode % 10000 == 0 or i_episode == max_episodes:
+        if i_episode % 10000 == 0 or i_episode == max_episodes - 1:
             print(
-                "Episodes {}/{}, Confidence score for the target model : {:.4f}".format(
-                    i_episode, max_episodes, best_score
-                )
+                f"Episodes {i_episode}/{max_episodes}, Confidence score for the target model: {best_score:.4f}"
             )
 
-    return best_images
+    # Return both the best images and the accuracy lists
+    return best_images, accuracy_E_list, accuracy_top5_E_list

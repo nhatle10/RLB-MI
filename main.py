@@ -77,9 +77,10 @@ if __name__ == "__main__":
 
     seed_everything(seed)
 
-    total = 0
-    cnt = 0
-    cnt5 = 0
+    # Initialize arrays to store accuracies for each checkpoint
+    num_checkpoints = (max_episodes // 500) + 1
+    cnt = [0] * num_checkpoints  # Use proper initialization
+    cnt5 = [0] * num_checkpoints
 
     identities = range(n_classes)
     targets = list(identities)[:n_target]
@@ -93,7 +94,8 @@ if __name__ == "__main__":
             hidden_size=256,
             action_prior="uniform",
         )
-        recon_image = inversion(
+        # Get both image and accuracy lists
+        recon_image, accuracy_list, accuracy_top5_list = inversion(
             agent,
             G,
             T,
@@ -105,21 +107,23 @@ if __name__ == "__main__":
             label=i,
             model_name=model_name,
         )
-        _, output = E(low2high(recon_image))
-        eval_prob = F.softmax(output[0], dim=-1)
-        top_idx = torch.argmax(eval_prob)
-        _, top5_idx = torch.topk(eval_prob, 5)
 
-        total += 1
-        if top_idx == i:
-            cnt += 1
-        if i in top5_idx:
-            cnt5 += 1
+        # Add the accuracies from each checkpoint to the running totals
+        for idx in range(len(accuracy_list)):
+            if accuracy_list[idx] > 0:  # If this example was correctly classified
+                cnt[idx] += 1
+            if accuracy_top5_list[idx] > 0:  # If this example was in top-5
+                cnt5[idx] += 1
 
-        acc = cnt / total
-        acc5 = cnt5 / total
         print(
-            "Classes {}/{}, Accuracy : {:.3f}, Top-5 Accuracy : {:.3f}".format(
-                total, n_target, acc, acc5
+            "Classes {}, Number of correct target Top-1 : {}, Number of correct target Top-5 : {}".format(
+                i, cnt[-1], cnt5[-1]
             )
+        )
+
+    # At the end, print or save the progression of accuracy across checkpoints
+    for idx, episode in enumerate(range(0, max_episodes + 1, 500)):
+        print(
+            f"After episode {episode}: Top-1 accuracy: {cnt[idx]}/{len(targets)}, "
+            f"Top-5 accuracy: {cnt5[idx]}/{len(targets)}"
         )
