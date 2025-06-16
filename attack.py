@@ -25,6 +25,7 @@ def inversion(
 ):
     print("Target Label : " + str(label))
     best_score = 0
+    best_images = None  # Track the best images found so far
 
     # Initialize lists to store the accuracy data
     episodes = []
@@ -142,12 +143,35 @@ def inversion(
             test_scores.append(test_score)
         mean_score = sum(test_scores) / len(test_scores)
 
+        # Update best images if current score is better
+        if mean_score >= best_score:
+            best_score = mean_score
+            best_images = torch.vstack(test_images)
+            os.makedirs(f"./result/images/{model_name}", exist_ok=True)
+            os.makedirs(f"./result/models/{model_name}", exist_ok=True)
+            save_image(
+                best_images,
+                f"./result/images/{model_name}/{label}_{alpha}.png",
+                nrow=10,
+            )
+            torch.save(
+                agent.actor_local.state_dict(),
+                f"./result/models/{model_name}/actor_{label}_{alpha}.pt",
+            )
+
         # Save metrics every 500 episodes
         if i_episode % 500 == 0 or i_episode == max_episodes - 1:
-            # Also evaluate using model E (FaceNet)
+            # Use the best images found so far instead of the current episode's images
             with torch.no_grad():
+                # If we have found any good images so far, use them
+                if best_images is not None:
+                    evaluation_images = best_images
+                else:
+                    # Otherwise, use the current images (this will only happen in the first 500 episodes)
+                    evaluation_images = torch.vstack(test_images)
+
                 # Use low2high preprocessing for model E as in main.py
-                test_image_E = low2high(torch.vstack(test_images))
+                test_image_E = low2high(evaluation_images)
                 _, E_output = E(test_image_E)
 
                 # Calculate top-1 and top-5 accuracy for evaluation model E
@@ -164,21 +188,6 @@ def inversion(
             print(f"Episode {i_episode}:")
             print(
                 f"  Top-1 Accuracy: {E_top1_correct.float().mean():.4f}, Top-5 accuracy: {E_top5_correct.float().mean():.4f}"
-            )
-
-        if mean_score >= best_score:
-            best_score = mean_score
-            best_images = torch.vstack(test_images)
-            os.makedirs(f"./result/images/{model_name}", exist_ok=True)
-            os.makedirs(f"./result/models/{model_name}", exist_ok=True)
-            save_image(
-                best_images,
-                f"./result/images/{model_name}/{label}_{alpha}.png",
-                nrow=10,
-            )
-            torch.save(
-                agent.actor_local.state_dict(),
-                f"./result/models/{model_name}/actor_{label}_{alpha}.pt",
             )
 
         if i_episode % 10000 == 0 or i_episode == max_episodes - 1:
